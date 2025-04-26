@@ -28,4 +28,11 @@ namespace IRacingDashboard.Models
             return $"{time.Minutes}:{time.Seconds:D2}.{time.Milliseconds / 10:D2}";
         }
     }
+
+
+    public class DashboardItem
+    {
+        public string Name { get; set; }
+        public Type ViewModelType { get; set; }
+    }
 }

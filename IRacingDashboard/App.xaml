@@ -4,6 +4,18 @@
              xmlns:local="clr-namespace:IRacingDashboard"
              StartupUri="MainWindow.xaml">
     <Application.Resources>
-         
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+
+                <!--Converters-->
+                <ResourceDictionary Source="Resources/Converters/ConvertersResource.xaml"/>
+                <ResourceDictionary Source="Resources/Colors/ThemeColor.xaml"/>
+
+                <ResourceDictionary Source="/Resources/Styles/ButtonStyles.xaml"/>
+                <ResourceDictionary Source="/Resources/Styles/Theme.xaml"/>
+
+
+            </ResourceDictionary.MergedDictionaries>
+        </ResourceDictionary>
     </Application.Resources>
 </Application>

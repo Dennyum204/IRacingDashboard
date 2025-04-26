@@ -9,6 +9,10 @@ namespace IRacingDashboard.Services
 {
     public class TelemetryService
     {
+        private static TelemetryService _instance;
+        public static TelemetryService Instance => _instance ??= new TelemetryService();
+
+
         private readonly IRacingSDK _irsdk;
         private readonly System.Timers.Timer _pollingTimer;
         private readonly double _pollingIntervalMs = 16.6;

@@ -17,10 +17,76 @@ namespace IRacingDashboard;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private double _prevWidth, _prevHeight, _prevTop, _prevLeft;
+    private bool _isMaximized = false;
+
     public MainWindow()
     {
         InitializeComponent();
-        DataContext = new MainViewModel(); // ✅ Set the ViewModel here
+        SaveWindowState();
+        //ToggleMaximize();
+    }
+    #region ButtonsHeader
+    private void SaveWindowState()
+    {
+        _prevWidth = this.Width;
+        _prevHeight = this.Height;
+        _prevTop = this.Top;
+        _prevLeft = this.Left;
+    }
+
+    public void ToggleMaximize()
+    {
+        if (_isMaximized)
+        {
+            // Restore Normal Window Size
+            this.Width = _prevWidth;
+            this.Height = _prevHeight;
+            this.Top = _prevTop;
+            this.Left = _prevLeft;
+        }
+        else
+        {
+            // Save the current window state before maximizing
+            SaveWindowState();
+
+            // Set the window to taskbar-friendly maximized mode
+            this.Top = SystemParameters.WorkArea.Top;
+            this.Left = SystemParameters.WorkArea.Left;
+            this.Width = SystemParameters.WorkArea.Width;
+            this.Height = SystemParameters.WorkArea.Height;
+        }
+
+        _isMaximized = !_isMaximized;
+    }
+
+
+    private void btnMinimize_Click(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Minimized;
+    }
+
+    private void btnMaximize_Click(object sender, RoutedEventArgs e)
+    {
+        ToggleMaximize();
 
     }
+
+    private void btnClose_Click(object sender, RoutedEventArgs e)
+    {
+        System.Windows.Application.Current.Shutdown();
+    }
+
+    private void Header_MouseDown(object sender, MouseButtonEventArgs e)
+    {
+        if (e.ClickCount == 2)
+        {
+            ToggleMaximize();
+        }
+        else if (e.LeftButton == MouseButtonState.Pressed)
+        {
+            this.DragMove();
+        }
+    }
+    #endregion
 }

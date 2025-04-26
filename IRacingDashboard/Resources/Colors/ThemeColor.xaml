@@ -1,0 +1,28 @@
+﻿<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+
+    
+    <!--BackGrounds-->
+    <SolidColorBrush x:Key="HeaderBackground" Color="#242528"/>
+    
+    <SolidColorBrush x:Key="PrimaryBackground" Color="#212529"/>
+    <SolidColorBrush x:Key="SecondaryBackground" Color="#343A40"/>
+
+
+    <SolidColorBrush x:Key="ActiveBackground" Color="#F8F9FA"/>
+
+    <SolidColorBrush x:Key="DashboardBackground" Color="#BF212529"/>
+    <SolidColorBrush x:Key="InvalidLap" Color="#BF942618"/>
+    <SolidColorBrush x:Key="ValidLap" Color="#BF288a35"/>
+    
+
+    <!--Texts-->
+    <SolidColorBrush x:Key="TextPrimmary" Color="#F8F9FA"/>
+    <SolidColorBrush x:Key="TextDark" Color="#212529"/>
+
+
+
+
+
+
+</ResourceDictionary>
