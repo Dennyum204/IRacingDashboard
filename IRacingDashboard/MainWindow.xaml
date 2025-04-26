@@ -7,8 +7,12 @@
                 xmlns:lvc="clr-namespace:LiveChartsCore.SkiaSharpView.WPF;assembly=LiveChartsCore.SkiaSharpView.WPF"
 
         mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
+        Title="MainWindow" Height="800" Width="800" Topmost="True">
     <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition/>
+            <RowDefinition Height="200"/>
+        </Grid.RowDefinitions>
         <lvc:CartesianChart Series="{Binding Series}" 
                             XAxes="{Binding XAxes}" 
                             YAxes="{Binding YAxes}" 
@@ -18,5 +22,28 @@
             <TextBlock Text="{Binding ConnectionStatus}" FontSize="24" FontWeight="Bold"
                Foreground="{Binding ConnectionColor}" />
         </StackPanel>
+
+        <DataGrid Grid.Row="1" ItemsSource="{Binding LapTimes}" IsReadOnly="True" AutoGenerateColumns="False" Margin="10">
+            <DataGrid.RowStyle>
+                <Style TargetType="DataGridRow">
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsValidLap}" Value="False">
+                            <Setter Property="Background" Value="LightCoral"/>
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsValidLap}" Value="True">
+                            <Setter Property="Background" Value="LightGreen"/>
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </DataGrid.RowStyle>
+            <DataGrid.Columns>
+                <DataGridTextColumn Header="Lap" Binding="{Binding LapNumber}" Width="Auto"/>
+                <DataGridTextColumn Header="Time" Binding="{Binding LapTimeFormatted}" Width="Auto"/>
+                <DataGridCheckBoxColumn Header="Valid" Binding="{Binding IsValidLap}" Width="Auto"/>
+                <DataGridTextColumn Header="Δ to Best" Binding="{Binding DeltaToBestFormatted}" Width="Auto"/>
+
+
+            </DataGrid.Columns>
+        </DataGrid>
     </Grid>
 </Window>
