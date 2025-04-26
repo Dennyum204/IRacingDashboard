@@ -28,6 +28,7 @@ namespace IRacingDashboard.ViewModels
             _telemetryService.Start();
 
 
+            Dashboards.Add(new DashboardItem { Name = "Map Track", ViewModelType = typeof(TrackMapDashboardViewModel) });
             Dashboards.Add(new DashboardItem { Name = "Telemetry Dashboard", ViewModelType = typeof(TelemetryDashboardViewModel) });
             Dashboards.Add(new DashboardItem { Name = "Personal Lap Times", ViewModelType = typeof(PersonalLapsDashboardViewModel) });
 
@@ -67,6 +68,10 @@ namespace IRacingDashboard.ViewModels
             else if (dashboard.ViewModelType == typeof(PersonalLapsDashboardViewModel))
             {
                 window = new Views.PersonalLapsDashboard();
+            }
+            else if (dashboard.ViewModelType == typeof(TrackMapDashboardViewModel))
+            {
+                window = new Views.TrackMapDashboardView();
             }
 
             if (window == null) return;

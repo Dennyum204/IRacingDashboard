@@ -15,6 +15,7 @@
     <PackageReference Include="irsdkSharp.Calculation" Version="0.9.0" />
     <PackageReference Include="irsdkSharp.Serialization" Version="0.9.0" />
     <PackageReference Include="LiveChartsCore.SkiaSharpView.WPF" Version="2.0.0-rc5.4" />
+    <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
   </ItemGroup>
 
 </Project>

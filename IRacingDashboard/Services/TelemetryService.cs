@@ -4,6 +4,8 @@ using irsdkSharp;
 using irsdkSharp.Serialization;
 using irsdkSharp.Serialization.Models.Data;
 using irsdkSharp.Serialization.Models.Fastest;
+using irsdkSharp.Serialization.Models.Session;
+using irsdkSharp.Serialization.Models.Session.WeekendInfo;
 
 namespace IRacingDashboard.Services
 {
@@ -18,6 +20,8 @@ namespace IRacingDashboard.Services
         private readonly double _pollingIntervalMs = 16.6;
 
         public event Action<Data> TelemetryUpdated;
+        public event Action<IRacingSessionModel> WeekendInfoUpdated;
+
         public event Action<bool> ConnectionChanged;
 
 
@@ -48,9 +52,11 @@ namespace IRacingDashboard.Services
             if (connected)
             {
                 var telemetry = _irsdk.GetData();
+                var sessionInfo = _irsdk.GetSerializedSessionInfo();
                 if (telemetry != null)
                 {
                     TelemetryUpdated?.Invoke(telemetry);
+                    WeekendInfoUpdated?.Invoke(sessionInfo);
                 }
             }
         }

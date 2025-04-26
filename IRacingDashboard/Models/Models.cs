@@ -6,6 +6,11 @@ using System.Threading.Tasks;
 
 namespace IRacingDashboard.Models
 {
+    public class TrackPoint
+    {
+        public double X { get; set; }
+        public double Z { get; set; }
+    }
     public class LapTimeEntry
     {
         public int LapNumber { get; set; }
