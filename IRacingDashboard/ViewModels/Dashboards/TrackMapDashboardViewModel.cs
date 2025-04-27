@@ -26,7 +26,8 @@ namespace IRacingDashboard.ViewModels
         private bool _isRecording = false;
         private int _startingLap = -1;
         string _trackName = "";
-        public ObservableCollection<TrackPoint> RecordedPoints { get; set; } = new();
+        private bool _recordedOneLap = false;
+
 
     
         public TrackMapDashboardViewModel()
@@ -34,7 +35,7 @@ namespace IRacingDashboard.ViewModels
             _telemetryService = TelemetryService.Instance;
             _telemetryService.TelemetryUpdated += OnTelemetryUpdated;
             _telemetryService.WeekendInfoUpdated += _telemetryService_WeekendInfoUpdated; ;
-
+            _telemetryService.Start();
 
         }
 
@@ -43,6 +44,29 @@ namespace IRacingDashboard.ViewModels
             if (!string.IsNullOrEmpty(_trackName)) return;
 
             _trackName = sessionInfo.WeekendInfo.TrackName;
+            TryLoadTrack();
+        }
+        private bool TryLoadTrack()
+        {
+            if (string.IsNullOrEmpty(_trackName)) return false;
+
+            string filename = $"{_trackName}.json";
+
+            if (File.Exists(filename))
+            {
+                var json = File.ReadAllText(filename);
+                var loadedPoints = JsonConvert.DeserializeObject<ObservableCollection<TrackPoint>>(json);
+
+                if (loadedPoints != null && loadedPoints.Count > 0)
+                {
+                    RecordedPoints = loadedPoints; // 🔥 triggers PropertyChanged now
+                    _recordedOneLap = true;
+                    DrawRecordedTrack();
+                    return true;
+                }
+            }
+
+            return false;
         }
 
         private void StartRecording()
@@ -58,9 +82,17 @@ namespace IRacingDashboard.ViewModels
         private void StopRecording()
         {
             _isRecording = false;
+            _recordedOneLap = true;
+            DrawRecordedTrack();
             SaveToJson();
 
         }
+
+        private void DrawRecordedTrack()
+        {
+           // throw new NotImplementedException();
+        }
+
         private void SaveToJson()
         {
       
@@ -68,27 +100,34 @@ namespace IRacingDashboard.ViewModels
             File.WriteAllText(_trackName+".json", json);
         }
 
-
+        private ObservableCollection<TrackPoint> _recordedPoints = new();
+        public ObservableCollection<TrackPoint> RecordedPoints
+        {
+            get => _recordedPoints;
+            set
+            {
+                _recordedPoints = value;
+                OnPropertyChanged(nameof(RecordedPoints)); // 🔥 trigger UI refresh
+            }
+        }
+        private double _lastLapDistPct = -1;
 
         private void OnTelemetryUpdated(Data telemetry)
         {
             App.Current.Dispatcher.Invoke(() =>
             {
-                var now = DateTime.UtcNow;
-                var deltaTime = (now - _lastUpdateTime).TotalSeconds;
-                _lastUpdateTime = now;
-                
-                double speed = telemetry.Speed;
                 double steering = telemetry.SteeringWheelAngle;
+                double lapDistPct = telemetry.LapDistPct;
                 int currentLap = telemetry.Lap;
 
                 if (_startingLap == -1)
                 {
-                    _startingLap = currentLap; // 🔥 remember starting lap
-                    return; // don't record yet
+                    _startingLap = currentLap;
+                    _lastLapDistPct = lapDistPct;
+                    return;
                 }
 
-                if (!_isRecording && currentLap > _startingLap)
+                if (!_isRecording && !_recordedOneLap && currentLap > _startingLap)
                 {
                     StartRecording();
                 }
@@ -100,17 +139,27 @@ namespace IRacingDashboard.ViewModels
 
                 if (_isRecording)
                 {
-                    double distanceMoved = speed * deltaTime;
-                    _ghostHeading += steering * deltaTime * 0.5;
+                    double deltaLapDist = lapDistPct - _lastLapDistPct;
+                    _lastLapDistPct = lapDistPct;
+
+                    if (deltaLapDist < 0) return; // Skip if LapDistPct reset
+
+                    double forwardDistance = deltaLapDist * 5000; // 🔥 5000 = total arbitrary "track units"
+
+                    // Apply a small base curve to naturally close track
+                    double baseTurnRate = 360.0 / 500.0; // 360 degrees per 5000 units
+                    double steeringSensitivity = 0.05;
+
+                    _ghostHeading += baseTurnRate + steering * steeringSensitivity * forwardDistance;
                     double headingRad = _ghostHeading * Math.PI / 180.0;
 
-                    _ghostX += distanceMoved * Math.Sin(headingRad);
-                    _ghostZ += distanceMoved * Math.Cos(headingRad);
+                    _ghostX += forwardDistance * Math.Sin(headingRad);
+                    _ghostZ += forwardDistance * Math.Cos(headingRad);
 
                     if (RecordedPoints.Count == 0 ||
-                        GetDistance(RecordedPoints[^1], _ghostX, _ghostZ) > 0.5)
+                        GetDistance(RecordedPoints[^1], _ghostX, _ghostZ) > 2)
                     {
-                        RecordedPoints.Add(new TrackPoint { X = _ghostX, Z = _ghostZ });
+                        RecordedPoints.Add(new TrackPoint { X = lapDistPct, Z = steering });
                     }
                 }
             });

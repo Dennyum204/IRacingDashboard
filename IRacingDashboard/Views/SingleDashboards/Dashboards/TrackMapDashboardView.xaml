@@ -10,10 +10,10 @@
         Title="TrackMapDashboardView" 
         Background="{x:Null}"
         Topmost="True" WindowStyle="None" AllowsTransparency="True"
-        Height="240" Width="250">
+        Height="Auto" Width="250">
 
     <Window.DataContext>
-        <ViewModels:PersonalLapsDashboardViewModel/>
+        <ViewModels:TrackMapDashboardViewModel/>
     </Window.DataContext>
     <Grid>
         <Grid.RowDefinitions>
@@ -40,6 +40,14 @@
             </StackPanel>
         </Grid>
 
+         <!--MAP-->
+        <Grid Grid.Row="1"  
+>
+            <Canvas Height="250" Width="250">
+                <Polyline Stroke="White" StrokeThickness="2"
+                          Points="{Binding RecordedPoints, Converter={StaticResource TrackPointsToPolylineConverter}}"/>
+            </Canvas>
+        </Grid>
 
     </Grid>
 </Window>

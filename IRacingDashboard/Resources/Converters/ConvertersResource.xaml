@@ -4,4 +4,6 @@
 
 
 
+    <ConverterClass:TrackPointsToPolylineConverter x:Key="TrackPointsToPolylineConverter"/>
+
 </ResourceDictionary>
