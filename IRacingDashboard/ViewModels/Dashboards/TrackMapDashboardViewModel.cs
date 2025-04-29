@@ -117,6 +117,11 @@ namespace IRacingDashboard.ViewModels
             App.Current.Dispatcher.Invoke(() =>
             {
                 double steering = telemetry.SteeringWheelAngle;
+                double yaw = telemetry.Yaw;
+                double yawnorth = telemetry.YawNorth;
+                double yawrate = telemetry.YawRate;
+                double yawrate_St = telemetry.YawRate_ST;
+
                 double lapDistPct = telemetry.LapDistPct;
                 int currentLap = telemetry.Lap;
 
@@ -159,7 +164,7 @@ namespace IRacingDashboard.ViewModels
                     if (RecordedPoints.Count == 0 ||
                         GetDistance(RecordedPoints[^1], _ghostX, _ghostZ) > 2)
                     {
-                        RecordedPoints.Add(new TrackPoint { X = lapDistPct, Z = steering });
+                        RecordedPoints.Add(new TrackPoint { X = lapDistPct, Z = yawrate_St });
                     }
                 }
             });
