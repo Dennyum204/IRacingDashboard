@@ -1,11 +1,21 @@
-﻿using System;
+﻿using IRacingDashboard.ViewModels;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media.Media3D;
 
 namespace IRacingDashboard.Models
 {
+    public class CarViewModel : BaseViewModel
+    {
+        public int Position { get; set; } // 1 = first, etc.
+        public string DriverName { get; set; }
+        public Point3D Position3D { get; set; }
+
+        public GeometryModel3D CarModel { get; set; }
+    }
     public class TrackPoint
     {
         public double X { get; set; }

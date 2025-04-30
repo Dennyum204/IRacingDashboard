@@ -4,13 +4,19 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:IRacingDashboard.Views"
+        xmlns:Enums="clr-namespace:IRacingDashboard.Enums"
+
                 xmlns:ViewModels="clr-namespace:IRacingDashboard.ViewModels"
         xmlns:fa="http://schemas.awesome.incremented/wpf/xaml/fontawesome.sharp"
+        xmlns:HelixToolkit="http://helix-toolkit.org/wpf"
+        
+                    xmlns:media3d="clr-namespace:System.Windows.Media.Media3D;assembly=PresentationCore"
+
         mc:Ignorable="d"
         Title="TrackMapDashboardView" 
         Background="{x:Null}"
         Topmost="True" WindowStyle="None" AllowsTransparency="True"
-        Height="Auto" Width="250">
+        Height="Auto" Width="300">
 
     <Window.DataContext>
         <ViewModels:TrackMapDashboardViewModel/>
@@ -18,7 +24,7 @@
     <Grid>
         <Grid.RowDefinitions>
             <RowDefinition Height="30"/>
-            <RowDefinition/>
+            <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         <!--HEADER-->
         <!--#region HEADER-->
@@ -41,12 +47,125 @@
         </Grid>
 
          <!--MAP-->
-        <Grid Grid.Row="1"  
->
-            <Canvas Height="250" Width="250">
-                <Polyline Stroke="White" StrokeThickness="2"
-                          Points="{Binding RecordedPoints, Converter={StaticResource TrackPointsToPolylineConverter}}"/>
-            </Canvas>
+        <Grid Grid.Row="1" Background="{StaticResource DashboardBackground}" Height="250" >
+            <HelixToolkit:HelixViewport3D ShowViewCube="False">
+                <HelixToolkit:HelixViewport3D.Camera>
+                    <media3d:PerspectiveCamera x:Name="TrackCamera"
+                                      Position="238.95,116.74,166.27" 
+                                      LookDirection="-226.79,-105.15,-194.0" 
+                                      UpDirection="0.21,0.10,0.97"
+                                               FieldOfView="45"/>
+                </HelixToolkit:HelixViewport3D.Camera>
+                <HelixToolkit:DefaultLights/>
+                <ModelVisual3D>
+                    <ModelVisual3D.Content>
+                        <Model3DGroup>
+                            <DirectionalLight Color="White" Direction="-1,-1,-2" />
+                            <GeometryModel3D Geometry="{Binding TrackMesh}">
+                                <GeometryModel3D.Material>
+                                    <MaterialGroup>
+                                        <DiffuseMaterial Brush="Crimson"/>
+                                        <SpecularMaterial Brush="White" SpecularPower="100"/>
+                                    </MaterialGroup>
+                                </GeometryModel3D.Material>
+                                <GeometryModel3D.BackMaterial>
+                                    <DiffuseMaterial Brush="DarkRed"/>
+                                </GeometryModel3D.BackMaterial>
+                            </GeometryModel3D>
+
+                        </Model3DGroup>
+                    </ModelVisual3D.Content>
+                </ModelVisual3D>
+                <!-- The car -->
+                
+                <!-- The sphere "label" above it -->
+                <ModelVisual3D Content="{Binding CarModel}">
+                    <ModelVisual3D.Transform>
+                        <TranslateTransform3D OffsetX="{Binding CarPosition.X}"
+                               OffsetY="{Binding CarPosition.Y}"
+                               OffsetZ="{Binding CarPosition.Z}" />
+                    </ModelVisual3D.Transform>
+                </ModelVisual3D>
+
+
+                <ModelVisual3D Content="{Binding StartLineModel}" />
+
+
+                <HelixToolkit:BillboardTextVisual3D 
+                    Text="1" 
+                    Position="{Binding CarLabelTextPosition}"
+                    Foreground="White"
+                    Background="Transparent" Padding="0" 
+                    FontSize="17" FontWeight="Bold"
+                    DepthOffset="0" >
+                    
+                </HelixToolkit:BillboardTextVisual3D>
+                
+                
+                <ModelVisual3D Content="{Binding SectorOverlayModel}" />
+
+
+            </HelixToolkit:HelixViewport3D>
+
+
+            <!--#region  Update Camara Button-->
+            <StackPanel HorizontalAlignment="Right" Visibility="Collapsed"
+                            VerticalAlignment="Bottom"  Margin="0,0,100,0" >
+                <TextBlock x:Name="PositionText" />
+                <TextBlock x:Name="LookDirectionText" />
+                <TextBlock x:Name="UpDirectionText" />
+                <Button x:Name="UpdateCameraBtn"  Width="100" Height="30"  Content="Update" Click="UpdateCameraBtn_Click"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Vertical" VerticalAlignment="Bottom">
+                
+            <Slider Grid.Row="0"
+            Minimum="0" VerticalAlignment="Bottom"
+            Maximum="1"
+            SmallChange="0.01"
+            LargeChange="0.05"
+            TickFrequency="0.01"
+            Value="{Binding SimulatedLapPct, Mode=TwoWay}"
+            Margin="10" />
+
+
+
+                <StackPanel Orientation="Horizontal" Margin="10" HorizontalAlignment="Left" VerticalAlignment="Top" >
+                    <StackPanel Margin="5" >
+                        <TextBlock Text="Sector 1" />
+                        <ComboBox Width="90" Background="Black"
+                   SelectedValue="{Binding Sector1State, Mode=TwoWay}"  SelectedValuePath="Content">
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.Clear}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.Slower}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.PersonalBest}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.SessionBest}" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Margin="5">
+                        <TextBlock Text="Sector 2" />
+                        <ComboBox Width="90" Background="Black"
+SelectedValue="{Binding Sector2State, Mode=TwoWay}"  SelectedValuePath="Content">
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.Clear}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.Slower}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.PersonalBest}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.SessionBest}" />
+                        </ComboBox>
+                    </StackPanel>
+
+                    <StackPanel Margin="5">
+                        <TextBlock Text="Sector 3" />
+                        <ComboBox Width="90" Background="Black"
+SelectedValue="{Binding Sector3State, Mode=TwoWay}"  SelectedValuePath="Content">
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.Clear}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.Slower}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.PersonalBest}" />
+                            <ComboBoxItem Content="{x:Static Enums:SectorState.SessionBest}" />
+                        </ComboBox>
+                    </StackPanel>
+                </StackPanel>
+
+            </StackPanel>
         </Grid>
 
     </Grid>

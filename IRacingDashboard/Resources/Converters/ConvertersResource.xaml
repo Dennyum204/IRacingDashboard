@@ -4,6 +4,6 @@
 
 
 
-    <ConverterClass:TrackPointsToPolylineConverter x:Key="TrackPointsToPolylineConverter"/>
+    <ConverterClass:LapYawToPolylineConverter x:Key="LapYawToPolylineConverter"/>
 
 </ResourceDictionary>
