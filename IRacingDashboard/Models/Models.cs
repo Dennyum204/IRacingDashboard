@@ -1,4 +1,5 @@
-﻿using IRacingDashboard.ViewModels;
+﻿using IRacingDashboard.Enums;
+using IRacingDashboard.ViewModels;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -8,6 +9,23 @@ using System.Windows.Media.Media3D;
 
 namespace IRacingDashboard.Models
 {
+
+    public class UIRenderedSector
+    {
+        public int SectorNumber { get; set; }       // 1-based for user readability
+        public double SectorTime { get; set; }      // seconds
+        public string SectorTimeFormatted
+        {
+            get
+            {
+                if (SectorTime <= 0) return "--";
+                var ts = TimeSpan.FromSeconds(SectorTime);
+                return $"{(int)ts.Minutes}:{ts.Seconds:D2}.{ts.Milliseconds:D3}";
+            }
+        }
+        public SectorState State { get; set; }
+    }
+
     public class CarViewModel : BaseViewModel
     {
         public int Position { get; set; } // 1 = first, etc.

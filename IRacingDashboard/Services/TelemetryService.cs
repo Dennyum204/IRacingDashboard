@@ -5,6 +5,8 @@ using irsdkSharp.Serialization;
 using irsdkSharp.Serialization.Models.Data;
 using irsdkSharp.Serialization.Models.Fastest;
 using irsdkSharp.Serialization.Models.Session;
+using irsdkSharp.Serialization.Models.Session.SessionInfo;
+using irsdkSharp.Serialization.Models.Session.SplitTimeInfo;
 using irsdkSharp.Serialization.Models.Session.WeekendInfo;
 
 namespace IRacingDashboard.Services
@@ -21,8 +23,12 @@ namespace IRacingDashboard.Services
 
         public event Action<Data> TelemetryUpdated;
         public event Action<IRacingSessionModel> WeekendInfoUpdated;
+        public event Action<SectorModel> SectorModelUpdated;
+        public event Action<SplitTimeInfoModel> SplitTimeInfoUpdated;
 
         public event Action<bool> ConnectionChanged;
+        public event Action<int> SectorsChanged;
+        public event Action<SplitTimeInfoModel> SplitTimeInfoChanged;
 
 
         public TelemetryService()
@@ -53,10 +59,21 @@ namespace IRacingDashboard.Services
             {
                 var telemetry = _irsdk.GetData();
                 var sessionInfo = _irsdk.GetSerializedSessionInfo();
+                //var sectorInfo = _irsdk.getsec();
+
+                
                 if (telemetry != null)
                 {
+                    int NSectors = sessionInfo.SplitTimeInfo.Sectors.Count();
+                    SplitTimeInfoModel SplitTimeInfoModel = sessionInfo.SplitTimeInfo;
+                                           
+                    
+                    SplitTimeInfoChanged?.Invoke(SplitTimeInfoModel); // ✅ Tell the ViewModel the connection status
+                    SectorsChanged?.Invoke(NSectors); // ✅ Tell the ViewModel the connection status
+                    
                     TelemetryUpdated?.Invoke(telemetry);
                     WeekendInfoUpdated?.Invoke(sessionInfo);
+                    //SectorModelUpdated?.Invoke(sectorInfo);
                 }
             }
         }

@@ -12,6 +12,7 @@
     <SolidColorBrush x:Key="ActiveBackground" Color="#F8F9FA"/>
 
     <SolidColorBrush x:Key="DashboardBackground" Color="#BF212529"/>
+    <SolidColorBrush x:Key="TrackBackground" Color="#40212529"/>
     <SolidColorBrush x:Key="InvalidLap" Color="#BF942618"/>
     <SolidColorBrush x:Key="ValidLap" Color="#BF288a35"/>
     

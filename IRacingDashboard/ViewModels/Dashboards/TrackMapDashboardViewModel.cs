@@ -6,6 +6,7 @@ using IRacingDashboard.Services;
 using irsdkSharp.Serialization.Models.Data;
 using irsdkSharp.Serialization.Models.Fastest;
 using irsdkSharp.Serialization.Models.Session;
+using irsdkSharp.Serialization.Models.Session.SplitTimeInfo;
 using irsdkSharp.Serialization.Models.Session.WeekendInfo;
 using Newtonsoft.Json;
 using OpenTK.Input;
@@ -34,17 +35,40 @@ namespace IRacingDashboard.ViewModels
         private int _startingLap = -1;
         string _trackName = "";
         private bool _recordedOneLap = false;
+        public ObservableCollection<UIRenderedSector> SectorDisplay { get; set; } = new();
 
 
-    
+
         public TrackMapDashboardViewModel()
         {
             _telemetryService = TelemetryService.Instance;
             _telemetryService.TelemetryUpdated += OnTelemetryUpdated;
-            _telemetryService.WeekendInfoUpdated += _telemetryService_WeekendInfoUpdated; ;
+            _telemetryService.WeekendInfoUpdated += _telemetryService_WeekendInfoUpdated;
+
+            _telemetryService.SectorsChanged += _telemetryService_SectorsChanged; ; // ✅ Listen for connection changes
+            _telemetryService.SplitTimeInfoChanged += _telemetryService_SplitTimeInfoChanged; ; ; // ✅ Listen for connection changes
+
             _telemetryService.Start();
 
             TryLoadTrack();
+
+            
+        }
+
+        private void _telemetryService_SplitTimeInfoChanged(SplitTimeInfoModel obj)
+        {
+
+            if (obj?.Sectors == null || obj.Sectors.Count == 0)
+                return;
+
+            SplitSectorInfo = obj.Sectors
+                .OrderBy(s => s.SectorNum)
+                .ToList(); // replaces the old list and triggers OnPropertyChanged
+        }
+
+        private void _telemetryService_SectorsChanged(int numberOfSectors)
+        {
+            NrOfSectors= numberOfSectors;
         }
 
         private void _telemetryService_WeekendInfoUpdated(IRacingSessionModel sessionInfo)
@@ -52,6 +76,7 @@ namespace IRacingDashboard.ViewModels
             if (!string.IsNullOrEmpty(_trackName)) return;
 
             _trackName = sessionInfo.WeekendInfo.TrackName;
+           
             TryLoadTrack();
         }
         private bool TryLoadTrack()
@@ -122,13 +147,20 @@ namespace IRacingDashboard.ViewModels
                 double yawrate = telemetry.YawRate;
                 double yawrate_St = telemetry.YawRate_ST;
 
-                double lapDistPct = telemetry.LapDistPct;
+                this.LapPct = telemetry.LapDistPct;                
+                OnPropertyChanged(nameof(LapPct));
+
+                //Check Sectors
+
+                CheckSectorsTimes(telemetry);
+                
+
                 int currentLap = telemetry.Lap;
 
                 if (_startingLap == -1)
                 {
                     _startingLap = currentLap;
-                    _lastLapDistPct = lapDistPct;
+                    _lastLapDistPct = LapPct;
                     return;
                 }
 
@@ -144,8 +176,8 @@ namespace IRacingDashboard.ViewModels
 
                 if (_isRecording)
                 {
-                    double deltaLapDist = lapDistPct - _lastLapDistPct;
-                    _lastLapDistPct = lapDistPct;
+                    double deltaLapDist = LapPct - _lastLapDistPct;
+                    _lastLapDistPct = LapPct;
 
                     if (deltaLapDist < 0) return; // Skip if LapDistPct reset
 
@@ -153,11 +185,128 @@ namespace IRacingDashboard.ViewModels
                     if (RecordedPoints.Count == 0 ||
                         GetDistance(RecordedPoints[^1], _ghostX, _ghostZ) > 2)
                     {
-                        RecordedPoints.Add(new TrackPoint { X = lapDistPct, Z = yawrate_St });
+                        RecordedPoints.Add(new TrackPoint { X = LapPct, Z = yawrate_St });
                     }
                 }
             });
         }
+
+
+
+
+        private int _lastSectorIndex = -1;
+        private double _sectorStartTime = 0;
+
+        private List<double> _bestSectorTimes = new(); // best overall (session best)
+        private List<double> _lastLapSectorTimes = new(); // this lap
+        public ObservableCollection<SectorState> SectorStates { get; set; } = new();
+        private int _lastLapNumber;
+
+        private void CheckSectorsTimes(Data telemetry)
+        {
+            double lapPct = telemetry.LapDistPct;
+            double lapTime = telemetry.LapCurrentLapTime;
+
+            //double sessionTime = telemetry.tim;
+
+
+            if (SplitSectorInfo == null || SplitSectorInfo.Count == 0) return;
+
+            if (NrOfSectors == 0) return;
+
+
+            
+
+
+            // 🔁 Detect new lap
+            if (_lastLapNumber != -1 && telemetry.Lap != _lastLapNumber)
+            {
+                _lastLapNumber = telemetry.Lap;
+                _lastSectorIndex = -1;
+                _sectorStartTime = 0;
+                _lastLapSectorTimes.Clear();
+                SectorDisplay.Clear();
+
+                SectorStates.Clear();
+                for (int i = 0; i < NrOfSectors; i++)
+                    SectorStates.Add(SectorState.Clear);
+
+                UpdateSectorOverlay();
+            }
+
+            int sectorCount = SplitSectorInfo.Count;
+            int currentSectorIndex = GetCurrentSectorIndex(lapPct);
+            //int currentSectorIndex = Math.Min((int)(lapPct * NrOfSectors), NrOfSectors - 1);
+
+            if (currentSectorIndex > _lastSectorIndex)
+            {
+                if (currentSectorIndex == 1) _sectorStartTime = 0;
+                double sectorTime = lapTime - _sectorStartTime;
+                int previousSector = _lastSectorIndex;
+
+                // Update timing lists safely
+                while (_lastLapSectorTimes.Count <= previousSector)
+                    _lastLapSectorTimes.Add(0);
+                while (_bestSectorTimes.Count <= previousSector)
+                    _bestSectorTimes.Add(double.MaxValue);
+                while (SectorStates.Count <= previousSector)
+                    SectorStates.Add(SectorState.Clear);
+
+                // Only apply timing logic for completed sectors
+                if (previousSector >= 0)
+                {
+                    _lastLapSectorTimes[previousSector] = sectorTime;
+
+                    if (sectorTime < _bestSectorTimes[previousSector])
+                    {
+                        _bestSectorTimes[previousSector] = sectorTime;
+                        SectorStates[previousSector] = SectorState.SessionBest;
+                    }
+                    else if (sectorTime < _lastLapSectorTimes.Take(previousSector).DefaultIfEmpty(double.MaxValue).Min())
+                    {
+                        SectorStates[previousSector] = SectorState.PersonalBest;
+                    }
+                    else
+                    {
+                        SectorStates[previousSector] = SectorState.Slower;
+                    }
+
+                    // Update UI list
+                    if (SectorDisplay.Count <= previousSector)
+                    {
+                        SectorDisplay.Add(new UIRenderedSector
+                        {
+                            SectorNumber = previousSector + 1,
+                            SectorTime = sectorTime,
+                            State = SectorStates[previousSector]
+                        });
+                    }
+                    else
+                    {
+                        SectorDisplay[previousSector].SectorTime = sectorTime;
+                        SectorDisplay[previousSector].State = SectorStates[previousSector];
+                    }
+
+                    OnPropertyChanged(nameof(SectorDisplay));
+                    OnPropertyChanged(nameof(SectorStates));
+                    UpdateSectorOverlay();
+                }
+
+                _lastSectorIndex = currentSectorIndex;
+                _sectorStartTime = lapTime;
+            }
+        }
+
+        private int GetCurrentSectorIndex(double lapPct)
+        {
+            for (int i = SplitSectorInfo.Count - 1; i >= 0; i--)
+            {
+                if (lapPct >= SplitSectorInfo[i].SectorStartPct)
+                    return i;
+            }
+            return 0;
+        }
+
 
         private double GetDistance(TrackPoint last, double x, double z)
         {
@@ -170,8 +319,12 @@ namespace IRacingDashboard.ViewModels
         public Model3D CarModel { get; set; }
         public Point3D CarPosition { get; set; }
         public Model3D StartLineModel { get; set; }
+        private List<Point3D> _leftEdge;
+        private List<Point3D> _rightEdge;
+        private double _overlayZ;
 
         private List<Point> scaled2D = new();
+
     
         private void DrawRecordedTrack()
         {
@@ -285,6 +438,7 @@ namespace IRacingDashboard.ViewModels
             TrackMesh = meshBuilder.ToMesh();
 
 
+
             // Generate the start line
             if (scaled2D.Count > 1)
             {
@@ -323,38 +477,50 @@ namespace IRacingDashboard.ViewModels
             }
 
 
-            var sectorGroup = new Model3DGroup();
-            double overlayZ = roadSurfaceZ + 0.02;
-
-            int total = leftEdge.Count - 1;
-
-            int s1Start = 0;
-            int s1End = total / 3;
-            int s2End = (2 * total) / 3;
-            int s3End = total;
-
-            var sector1 = CreateSectorModel(leftEdge, rightEdge, s1Start, s1End, overlayZ, Sector1State);
-            if (sector1 != null) sectorGroup.Children.Add(sector1);
-
-            var sector2 = CreateSectorModel(leftEdge, rightEdge, s1End, s2End, overlayZ, Sector2State);
-            if (sector2 != null) sectorGroup.Children.Add(sector2);
-
-            var sector3 = CreateSectorModel(leftEdge, rightEdge, s2End, s3End, overlayZ, Sector3State);
-            if (sector3 != null) sectorGroup.Children.Add(sector3);
 
 
-            SectorOverlayModel = sectorGroup;
-            OnPropertyChanged(nameof(SectorOverlayModel));
+
+            // 🔁 Save edges for reuse
+            _leftEdge = leftEdge;
+            _rightEdge = rightEdge;
+            _overlayZ = roadSurfaceZ + 0.02;
+
+
+            UpdateSectorOverlay();
 
 
         }
 
-        private GeometryModel3D CreateSectorModel(List<Point3D> left, List<Point3D> right,
-                                          int start, int end, double z, SectorState state)
+        public void UpdateSectorOverlay()
         {
-            if (state == SectorState.Clear)
-                return null;
+            if (_leftEdge == null || _rightEdge == null || _leftEdge.Count != _rightEdge.Count)
+                return;
 
+            var sectorGroup = new Model3DGroup();
+            int total = _leftEdge.Count - 1;
+            int sectorCount = Math.Max(1, NrOfSectors);
+            int pointsPerSector = total / sectorCount;
+
+            for (int i = 0; i < sectorCount; i++)
+            {
+                int start = i * pointsPerSector;
+                int end = (i == sectorCount - 1) ? total : (i + 1) * pointsPerSector;
+
+                SectorState state = (i < SectorStates.Count) ? SectorStates[i] : SectorState.Clear;
+
+                var sector = CreateSectorModel(_leftEdge, _rightEdge, start, end, _overlayZ, state);
+                if (sector != null)
+                    sectorGroup.Children.Add(sector);
+            }
+
+            SectorOverlayModel = sectorGroup;
+            OnPropertyChanged(nameof(SectorOverlayModel));
+        }
+
+
+        private GeometryModel3D CreateSectorModel(List<Point3D> left, List<Point3D> right,
+                                                  int start, int end, double z, SectorState state)
+        {
             var builder = new MeshBuilder();
 
             for (int i = start; i < end; i++)
@@ -369,10 +535,11 @@ namespace IRacingDashboard.ViewModels
 
             Brush color = state switch
             {
-                SectorState.Slower => Brushes.Yellow,
+                SectorState.Slower => Brushes.Goldenrod,
                 SectorState.PersonalBest => Brushes.LimeGreen,
                 SectorState.SessionBest => Brushes.MediumPurple,
-                _ => Brushes.White
+                SectorState.Clear => Brushes.Transparent,
+                _ => Brushes.Gray
             };
 
             return new GeometryModel3D
@@ -386,7 +553,6 @@ namespace IRacingDashboard.ViewModels
 
 
 
-      
 
         private void UpdateCarPosition(double lapDistPct)
         {
@@ -431,46 +597,33 @@ namespace IRacingDashboard.ViewModels
 
 
 
-
         #region Properties
+        
 
 
-
-        private SectorState _sector1State = SectorState.SessionBest;
-        public SectorState Sector1State
+        private List<SectorModel> _SplitSectorInfo = new();
+        public List<SectorModel> SplitSectorInfo
         {
-            get => _sector1State;
+            get => _SplitSectorInfo;
             set
             {
-                _sector1State = value;
-                OnPropertyChanged(nameof(Sector1State));
-                DrawRecordedTrack(); // redraw overlays
+                _SplitSectorInfo = value;
+                OnPropertyChanged(nameof(SplitSectorInfo));
             }
         }
+
+        private int _NrOfSectors = 0;
+        public int NrOfSectors
+        {
+            get => _NrOfSectors;
+            set
+            {
+                _NrOfSectors = value;
+                OnPropertyChanged(nameof(NrOfSectors));
+            }
+        }
+
       
-
-        private SectorState _sector2State = SectorState.SessionBest;
-        public SectorState Sector2State
-        {
-            get => _sector2State;
-            set
-            {
-                _sector2State = value;
-                OnPropertyChanged(nameof(Sector2State));
-                DrawRecordedTrack(); // redraw overlays
-            }
-        }
-        private SectorState _sector3State = SectorState.SessionBest;
-        public SectorState Sector3State
-        {
-            get => _sector3State;
-            set
-            {
-                _sector3State = value;
-                OnPropertyChanged(nameof(Sector3State));
-                DrawRecordedTrack(); // redraw overlays
-            }
-        }
         public Model3DGroup SectorOverlayModel { get; set; } = new Model3DGroup();
 
 
@@ -486,17 +639,17 @@ namespace IRacingDashboard.ViewModels
             }
         }
 
-        private double _simulatedLapPct = 0.0;
-        public double SimulatedLapPct
+        private double _LapPct = 0.0;
+        public double LapPct
         {
-            get => _simulatedLapPct;
+            get => _LapPct;
             set
             {
-                if (_simulatedLapPct != value)
+                if (_LapPct != value)
                 {
-                    _simulatedLapPct = value;
-                    UpdateCarPosition(_simulatedLapPct);
-                    OnPropertyChanged(nameof(SimulatedLapPct));
+                    _LapPct = value;
+                    UpdateCarPosition(_LapPct);
+                    OnPropertyChanged(nameof(LapPct));
                 }
             }
         }

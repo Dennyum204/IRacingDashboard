@@ -16,7 +16,7 @@
         Title="TrackMapDashboardView" 
         Background="{x:Null}"
         Topmost="True" WindowStyle="None" AllowsTransparency="True"
-        Height="Auto" Width="300">
+        Height="Auto" Width="450">
 
     <Window.DataContext>
         <ViewModels:TrackMapDashboardViewModel/>
@@ -46,14 +46,20 @@
             </StackPanel>
         </Grid>
 
-         <!--MAP-->
-        <Grid Grid.Row="1" Background="{StaticResource DashboardBackground}" Height="250" >
+
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition/>
+                <RowDefinition/>
+            </Grid.RowDefinitions>
+            
+            <Grid Grid.Row="0" Background="{StaticResource TrackBackground}" Height="250" >
             <HelixToolkit:HelixViewport3D ShowViewCube="False">
                 <HelixToolkit:HelixViewport3D.Camera>
                     <media3d:PerspectiveCamera x:Name="TrackCamera"
-                                      Position="238.95,116.74,166.27" 
-                                      LookDirection="-226.79,-105.15,-194.0" 
-                                      UpDirection="0.21,0.10,0.97"
+                                      Position="289.99,115.50,179.29" 
+                                      LookDirection="-280.80,-112.62,-198.84" 
+                                      UpDirection="0.28,0.12,0.95"
                                                FieldOfView="45"/>
                 </HelixToolkit:HelixViewport3D.Camera>
                 <HelixToolkit:DefaultLights/>
@@ -96,7 +102,7 @@
                     Position="{Binding CarLabelTextPosition}"
                     Foreground="White"
                     Background="Transparent" Padding="0" 
-                    FontSize="17" FontWeight="Bold"
+                    FontSize="18" FontWeight="Bold"
                     DepthOffset="0" >
                     
                 </HelixToolkit:BillboardTextVisual3D>
@@ -119,18 +125,9 @@
 
             <StackPanel Orientation="Vertical" VerticalAlignment="Bottom">
                 
-            <Slider Grid.Row="0"
-            Minimum="0" VerticalAlignment="Bottom"
-            Maximum="1"
-            SmallChange="0.01"
-            LargeChange="0.05"
-            TickFrequency="0.01"
-            Value="{Binding SimulatedLapPct, Mode=TwoWay}"
-            Margin="10" />
+         
 
-
-
-                <StackPanel Orientation="Horizontal" Margin="10" HorizontalAlignment="Left" VerticalAlignment="Top" >
+                <StackPanel Orientation="Horizontal" Margin="10" HorizontalAlignment="Left" VerticalAlignment="Top" Visibility="Collapsed" >
                     <StackPanel Margin="5" >
                         <TextBlock Text="Sector 1" />
                         <ComboBox Width="90" Background="Black"
@@ -166,7 +163,32 @@ SelectedValue="{Binding Sector3State, Mode=TwoWay}"  SelectedValuePath="Content"
                 </StackPanel>
 
             </StackPanel>
+
+
+
         </Grid>
+
+            <Grid Grid.Row="1" Background="Black">
+                <ItemsControl ItemsSource="{Binding SectorDisplay}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Border Margin="2" Padding="6"
+                    
+                                 CornerRadius="4">
+                                <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                    <TextBlock Text="Sector " FontWeight="Bold" Foreground="White"/>
+                                    <TextBlock Text="{Binding SectorNumber}" Margin="4,0,10,0" Foreground="White"/>
+                                    <TextBlock Text="{Binding SectorTimeFormatted}" FontWeight="SemiBold" Foreground="White"/>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </Grid>
+        
+        
+        </Grid>
+         <!--MAP-->
 
     </Grid>
 </Window>
