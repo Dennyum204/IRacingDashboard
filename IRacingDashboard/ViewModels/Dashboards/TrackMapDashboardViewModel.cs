@@ -79,6 +79,7 @@ namespace IRacingDashboard.ViewModels
            
             TryLoadTrack();
         }
+       
         private bool TryLoadTrack()
         {
              _trackName = "limerock 2019 gp";
@@ -201,90 +202,134 @@ namespace IRacingDashboard.ViewModels
         private List<double> _lastLapSectorTimes = new(); // this lap
         public ObservableCollection<SectorState> SectorStates { get; set; } = new();
         private int _lastLapNumber;
+        private double _lastLapTime = 0;
+        private double _lastLapPct = 0;
+        private double _sectorStartDelta = 0;
+        private List<double> _sectorDeltas = new();
 
         private void CheckSectorsTimes(Data telemetry)
         {
             double lapPct = telemetry.LapDistPct;
-            double lapTime = telemetry.LapCurrentLapTime;
+            double lapDelta = telemetry.LapDeltaToSessionBestLap;
 
-            //double sessionTime = telemetry.tim;
+            if (SplitSectorInfo == null || SplitSectorInfo.Count == 0 || NrOfSectors == 0)
+                return;
 
+            int currentSectorIndex = GetCurrentSectorIndex(lapPct);
 
-            if (SplitSectorInfo == null || SplitSectorInfo.Count == 0) return;
-
-            if (NrOfSectors == 0) return;
-
-
-            
-
-
-            // 🔁 Detect new lap
+            // 🔁 Detect new lap and finalize last sector before resetting
             if (_lastLapNumber != -1 && telemetry.Lap != _lastLapNumber)
             {
-                _lastLapNumber = telemetry.Lap;
-                _lastSectorIndex = -1;
-                _sectorStartTime = 0;
-                _lastLapSectorTimes.Clear();
-                SectorDisplay.Clear();
+                int completedLapNumber = _lastLapNumber;
+                _lastLapNumber = telemetry.Lap; // Update immediately to prevent retrigger
+                int lastSectorIndex = NrOfSectors - 1;
+                double accumulatedDelta = _sectorDeltas.Take(lastSectorIndex).Sum();
 
-                SectorStates.Clear();
-                for (int i = 0; i < NrOfSectors; i++)
-                    SectorStates.Add(SectorState.Clear);
+                Task.Run(async () =>
+                {
+                    await Task.Delay(1000); // ⏱ Wait for LapLastLapTime to become valid
 
-                UpdateSectorOverlay();
+                    App.Current.Dispatcher.Invoke(() =>
+                    {
+                        double totalLapTime = telemetry.LapLastLapTime;
+                        double bestLapTime = telemetry.LapBestLapTime;
+                        double totalDelta = totalLapTime - bestLapTime;
+                        double finalDelta = totalDelta - accumulatedDelta;
+
+                        while (_sectorDeltas.Count <= lastSectorIndex)
+                            _sectorDeltas.Add(0);
+                        _sectorDeltas[lastSectorIndex] = finalDelta;
+
+                        SectorState state = finalDelta < 0 ? SectorState.SessionBest :
+                                            finalDelta == 0 ? SectorState.PersonalBest :
+                                            SectorState.Slower;
+
+                        while (SectorStates.Count <= lastSectorIndex)
+                            SectorStates.Add(SectorState.Clear);
+                        SectorStates[lastSectorIndex] = state;
+
+                        if (SectorDisplay.Count <= lastSectorIndex)
+                        {
+                            SectorDisplay.Add(new UIRenderedSector
+                            {
+                                SectorNumber = lastSectorIndex + 1,
+                                DeltaToBest = finalDelta,
+                                State = state
+                            });
+                        }
+                        else
+                        {
+                            SectorDisplay[lastSectorIndex].DeltaToBest = finalDelta;
+                            SectorDisplay[lastSectorIndex].State = state;
+                        }
+
+                        OnPropertyChanged(nameof(SectorDisplay));
+                        OnPropertyChanged(nameof(SectorStates));
+                        UpdateSectorOverlay();
+
+                        // ⏱ Clear after another 2 seconds
+                        Task.Run(async () =>
+                        {
+                            await Task.Delay(2000);
+                            App.Current.Dispatcher.Invoke(() =>
+                            {
+                                SectorDisplay.Clear();
+                                SectorStates.Clear();
+                                for (int i = 0; i < NrOfSectors; i++)
+                                    SectorStates.Add(SectorState.Clear);
+
+                                UpdateSectorOverlay();
+                                OnPropertyChanged(nameof(SectorDisplay));
+                                OnPropertyChanged(nameof(SectorStates));
+                            });
+                        });
+
+                        _lastSectorIndex = -1;
+                        _sectorStartDelta = 0;
+                        _sectorDeltas.Clear();
+                    });
+                });
             }
 
-            int sectorCount = SplitSectorInfo.Count;
-            int currentSectorIndex = GetCurrentSectorIndex(lapPct);
-            //int currentSectorIndex = Math.Min((int)(lapPct * NrOfSectors), NrOfSectors - 1);
 
+
+
+            // Regular sector change handling
             if (currentSectorIndex > _lastSectorIndex)
             {
-                if (currentSectorIndex == 1) _sectorStartTime = 0;
-                double sectorTime = lapTime - _sectorStartTime;
-                int previousSector = _lastSectorIndex;
+                if (currentSectorIndex == 1)
+                    _sectorStartDelta = 0;
 
-                // Update timing lists safely
-                while (_lastLapSectorTimes.Count <= previousSector)
-                    _lastLapSectorTimes.Add(0);
-                while (_bestSectorTimes.Count <= previousSector)
-                    _bestSectorTimes.Add(double.MaxValue);
-                while (SectorStates.Count <= previousSector)
-                    SectorStates.Add(SectorState.Clear);
-
-                // Only apply timing logic for completed sectors
-                if (previousSector >= 0)
+                int prevSector = _lastSectorIndex;
+                if (prevSector >= 0)
                 {
-                    _lastLapSectorTimes[previousSector] = sectorTime;
+                    double sectorDelta = lapDelta - _sectorStartDelta;
 
-                    if (sectorTime < _bestSectorTimes[previousSector])
-                    {
-                        _bestSectorTimes[previousSector] = sectorTime;
-                        SectorStates[previousSector] = SectorState.SessionBest;
-                    }
-                    else if (sectorTime < _lastLapSectorTimes.Take(previousSector).DefaultIfEmpty(double.MaxValue).Min())
-                    {
-                        SectorStates[previousSector] = SectorState.PersonalBest;
-                    }
-                    else
-                    {
-                        SectorStates[previousSector] = SectorState.Slower;
-                    }
+                    while (_sectorDeltas.Count <= prevSector)
+                        _sectorDeltas.Add(0);
+                    _sectorDeltas[prevSector] = sectorDelta;
 
-                    // Update UI list
-                    if (SectorDisplay.Count <= previousSector)
+                    SectorState state = sectorDelta < 0 ? SectorState.SessionBest :
+                                        sectorDelta == 0 ? SectorState.PersonalBest :
+                                        SectorState.Slower;
+
+                    while (SectorStates.Count <= prevSector)
+                        SectorStates.Add(SectorState.Clear);
+                    SectorStates[prevSector] = state;
+
+                    if (SectorDisplay.Count <= prevSector)
                     {
                         SectorDisplay.Add(new UIRenderedSector
                         {
-                            SectorNumber = previousSector + 1,
-                            SectorTime = sectorTime,
-                            State = SectorStates[previousSector]
+                            SectorNumber = prevSector + 1,
+                            DeltaToBest = sectorDelta,
+                            State = state
                         });
                     }
                     else
                     {
-                        SectorDisplay[previousSector].SectorTime = sectorTime;
-                        SectorDisplay[previousSector].State = SectorStates[previousSector];
+                        SectorDisplay[prevSector].DeltaToBest = sectorDelta;
+                        SectorDisplay[prevSector].State = state;
                     }
 
                     OnPropertyChanged(nameof(SectorDisplay));
@@ -292,10 +337,16 @@ namespace IRacingDashboard.ViewModels
                     UpdateSectorOverlay();
                 }
 
+                _sectorStartDelta = lapDelta;
                 _lastSectorIndex = currentSectorIndex;
-                _sectorStartTime = lapTime;
             }
         }
+
+
+
+
+
+
 
         private int GetCurrentSectorIndex(double lapPct)
         {
@@ -495,20 +546,27 @@ namespace IRacingDashboard.ViewModels
         {
             if (_leftEdge == null || _rightEdge == null || _leftEdge.Count != _rightEdge.Count)
                 return;
+            if (SplitSectorInfo == null || SplitSectorInfo.Count == 0)
+                return;
 
             var sectorGroup = new Model3DGroup();
-            int total = _leftEdge.Count - 1;
-            int sectorCount = Math.Max(1, NrOfSectors);
-            int pointsPerSector = total / sectorCount;
+            int totalPoints = _leftEdge.Count - 1;
 
-            for (int i = 0; i < sectorCount; i++)
+            for (int i = 0; i < SplitSectorInfo.Count; i++)
             {
-                int start = i * pointsPerSector;
-                int end = (i == sectorCount - 1) ? total : (i + 1) * pointsPerSector;
+                double startPct = SplitSectorInfo[i].SectorStartPct;
+                double endPct = (i < SplitSectorInfo.Count - 1)
+                                ? SplitSectorInfo[i + 1].SectorStartPct
+                                : 1.0;
+
+                int startIndex = (int)(startPct * totalPoints);
+                int endIndex = (int)(endPct * totalPoints);
+
+                if (endIndex > totalPoints) endIndex = totalPoints;
 
                 SectorState state = (i < SectorStates.Count) ? SectorStates[i] : SectorState.Clear;
 
-                var sector = CreateSectorModel(_leftEdge, _rightEdge, start, end, _overlayZ, state);
+                var sector = CreateSectorModel(_leftEdge, _rightEdge, startIndex, endIndex, _overlayZ, state);
                 if (sector != null)
                     sectorGroup.Children.Add(sector);
             }
@@ -516,6 +574,7 @@ namespace IRacingDashboard.ViewModels
             SectorOverlayModel = sectorGroup;
             OnPropertyChanged(nameof(SectorOverlayModel));
         }
+
 
 
         private GeometryModel3D CreateSectorModel(List<Point3D> left, List<Point3D> right,

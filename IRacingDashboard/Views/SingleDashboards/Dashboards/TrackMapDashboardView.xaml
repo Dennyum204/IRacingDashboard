@@ -16,7 +16,7 @@
         Title="TrackMapDashboardView" 
         Background="{x:Null}"
         Topmost="True" WindowStyle="None" AllowsTransparency="True"
-        Height="Auto" Width="450">
+        Height="Auto" Width="600">
 
     <Window.DataContext>
         <ViewModels:TrackMapDashboardViewModel/>
@@ -57,9 +57,9 @@
             <HelixToolkit:HelixViewport3D ShowViewCube="False">
                 <HelixToolkit:HelixViewport3D.Camera>
                     <media3d:PerspectiveCamera x:Name="TrackCamera"
-                                      Position="289.99,115.50,179.29" 
-                                      LookDirection="-280.80,-112.62,-198.84" 
-                                      UpDirection="0.28,0.12,0.95"
+                                      Position="263.63,137.66,199.91" 
+                                      LookDirection="-254.44,-134.78,-219.46" 
+                                      UpDirection="0.21,0.12,0.97"
                                                FieldOfView="45"/>
                 </HelixToolkit:HelixViewport3D.Camera>
                 <HelixToolkit:DefaultLights/>
@@ -168,22 +168,38 @@ SelectedValue="{Binding Sector3State, Mode=TwoWay}"  SelectedValuePath="Content"
 
         </Grid>
 
-            <Grid Grid.Row="1" Background="Black">
+            <Grid Grid.Row="1" >
                 <ItemsControl ItemsSource="{Binding SectorDisplay}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Border Margin="2" Padding="6"
-                    
-                                 CornerRadius="4">
+                            <Border Margin="2" Padding="10" CornerRadius="4" >
+                                <Border.Style>
+                                    <Style TargetType="Border">
+                                        <Setter Property="Background" Value="{StaticResource ClearSector}"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding State}" Value="Slower">
+                                                <Setter Property="Background" Value="{StaticResource SlowerSector}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding State}" Value="PersonalBest">
+                                                <Setter Property="Background" Value="{StaticResource BestPersonalSector}"/>
+                                            </DataTrigger>
+                                            <DataTrigger Binding="{Binding State}" Value="SessionBest">
+                                                <Setter Property="Background" Value="{StaticResource BestSessionSector}"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </Border.Style>
+
                                 <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                                    <TextBlock Text="Sector " FontWeight="Bold" Foreground="White"/>
-                                    <TextBlock Text="{Binding SectorNumber}" Margin="4,0,10,0" Foreground="White"/>
-                                    <TextBlock Text="{Binding SectorTimeFormatted}" FontWeight="SemiBold" Foreground="White"/>
+                                    <TextBlock Text="Sector " FontWeight="Bold" FontSize="20" Foreground="White"/>
+                                    <TextBlock Text="{Binding SectorNumber}" Margin="4,0,10,0" FontSize="20" Foreground="White"/>
+                                    <TextBlock Text="{Binding DeltaFormatted}" FontWeight="SemiBold" FontSize="20" Foreground="White"/>
                                 </StackPanel>
                             </Border>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
             </Grid>
         
         

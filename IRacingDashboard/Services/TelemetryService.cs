@@ -19,7 +19,7 @@ namespace IRacingDashboard.Services
 
         private readonly IRacingSDK _irsdk;
         private readonly System.Timers.Timer _pollingTimer;
-        private readonly double _pollingIntervalMs = 16.6;
+        private readonly double _pollingIntervalMs = 16;
 
         public event Action<Data> TelemetryUpdated;
         public event Action<IRacingSessionModel> WeekendInfoUpdated;
@@ -66,7 +66,7 @@ namespace IRacingDashboard.Services
                 {
                     int NSectors = sessionInfo.SplitTimeInfo.Sectors.Count();
                     SplitTimeInfoModel SplitTimeInfoModel = sessionInfo.SplitTimeInfo;
-                                           
+             
                     
                     SplitTimeInfoChanged?.Invoke(SplitTimeInfoModel); // ✅ Tell the ViewModel the connection status
                     SectorsChanged?.Invoke(NSectors); // ✅ Tell the ViewModel the connection status

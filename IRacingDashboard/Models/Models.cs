@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Windows.Media;
 using System.Windows.Media.Media3D;
 
 namespace IRacingDashboard.Models
@@ -13,16 +14,23 @@ namespace IRacingDashboard.Models
     public class UIRenderedSector
     {
         public int SectorNumber { get; set; }       // 1-based for user readability
-        public double SectorTime { get; set; }      // seconds
-        public string SectorTimeFormatted
+        public double DeltaToBest { get; set; }
+
+        public string DeltaFormatted
         {
             get
             {
-                if (SectorTime <= 0) return "--";
-                var ts = TimeSpan.FromSeconds(SectorTime);
-                return $"{(int)ts.Minutes}:{ts.Seconds:D2}.{ts.Milliseconds:D3}";
+                if (double.IsNaN(DeltaToBest)) return "--";
+                return DeltaToBest switch
+                {
+                    > 0 => $"+{DeltaToBest:F2}",
+                    < 0 => $"{DeltaToBest:F2}",
+                    _ => "±0.00"
+                };
             }
         }
+        public Brush BackgroundColor =>
+            DeltaToBest > 0 ? Brushes.Goldenrod : DeltaToBest < 0 ? Brushes.MediumPurple : Brushes.Gray;
         public SectorState State { get; set; }
     }
 
